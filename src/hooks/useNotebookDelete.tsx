@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,7 +61,66 @@ export const useNotebookDelete = () => {
           console.log('No files to delete from storage (URL-based sources or no file_paths)');
         }
 
-        // Delete the notebook - this will cascade delete all sources
+        // Delete audio files from storage if they exist
+        try {
+          console.log('Attempting to delete audio files for notebook:', notebookId);
+          
+          // List all files in the notebook's audio folder
+          const { data: audioFiles, error: listError } = await supabase.storage
+            .from('audio')
+            .list(notebookId);
+
+          if (listError) {
+            console.error('Error listing audio files:', listError);
+          } else if (audioFiles && audioFiles.length > 0) {
+            // Delete all audio files in the folder
+            const audioFilePaths = audioFiles.map(file => `${notebookId}/${file.name}`);
+            console.log('Deleting audio files:', audioFilePaths);
+            
+            const { error: deleteAudioError } = await supabase.storage
+              .from('audio')
+              .remove(audioFilePaths);
+
+            if (deleteAudioError) {
+              console.error('Error deleting audio files from storage:', deleteAudioError);
+            } else {
+              console.log('Successfully deleted audio files from storage');
+            }
+          }
+        } catch (audioError) {
+          console.error('Audio file cleanup failed:', audioError);
+          // Continue with deletion even if audio cleanup fails
+        }
+
+        // Delete related records from documents table
+        console.log('Deleting related documents...');
+        const { error: documentsError } = await supabase
+          .from('documents')
+          .delete()
+          .eq('metadata->>notebook_id', notebookId);
+
+        if (documentsError) {
+          console.error('Error deleting documents:', documentsError);
+          // Continue with deletion even if documents cleanup fails
+        } else {
+          console.log('Successfully deleted related documents');
+        }
+
+        // Delete related records from n8n_chat_histories table
+        console.log('Deleting chat history...');
+        const { error: chatError } = await supabase
+          .from('n8n_chat_histories')
+          .delete()
+          .eq('session_id', notebookId);
+
+        if (chatError) {
+          console.error('Error deleting chat history:', chatError);
+          // Continue with deletion even if chat history cleanup fails
+        } else {
+          console.log('Successfully deleted chat history');
+        }
+
+        // Delete the notebook - this will cascade delete sources and notes
         const { error: deleteError } = await supabase
           .from('notebooks')
           .delete()
@@ -73,7 +131,7 @@ export const useNotebookDelete = () => {
           throw deleteError;
         }
         
-        console.log('Notebook deleted successfully with cascade deletion');
+        console.log('Notebook deleted successfully with all related data cleaned up');
         return notebook;
       } catch (error) {
         console.error('Error in deletion process:', error);
@@ -87,10 +145,12 @@ export const useNotebookDelete = () => {
       queryClient.invalidateQueries({ queryKey: ['notebooks', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['sources', notebookId] });
       queryClient.invalidateQueries({ queryKey: ['notebook', notebookId] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', notebookId] });
+      queryClient.invalidateQueries({ queryKey: ['notes', notebookId] });
       
       toast({
         title: "Notebook deleted",
-        description: `"${deletedNotebook?.title || 'Notebook'}" and all its sources have been successfully deleted.`,
+        description: `"${deletedNotebook?.title || 'Notebook'}" and all its data have been successfully deleted.`,
       });
     },
     onError: (error: any) => {
