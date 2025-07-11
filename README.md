@@ -80,6 +80,7 @@ You will need a notepad file open to copy and paste in various credentials and d
 1.  **Create Supabase Account and Project**
     * Go to [Supabase.com](https://supabase.com/) and create a free account.
     * Create a new project. Paste in your `database password` into your open notepad file as you will need this later.
+    * **IMPORTANT:** After creating your project, navigate to `Authentication` → `Settings` in your Supabase dashboard and disable "Enable email confirmations" under the Email section. This prevents sign-up errors when SMTP is not configured.
 2.  **Create GitHub Account & Repo from Template**
     * If you don't have one, create a free account on [GitHub](https://github.com/).
     * Navigate to the InsightsLM template repository here: [**github.com/theaiautomators/insights-lm-public**](https://github.com/theaiautomators/insights-lm-public)

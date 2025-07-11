@@ -94,19 +94,17 @@ const AuthForm = () => {
         email,
         password,
         options: {
-          emailRedirectTo: undefined,
           data: {
             full_name: fullName,
           },
-          // Disable email confirmation for development
-          // This prevents the "Error sending confirmation email" issue
-          // when SMTP is not configured in Supabase
         }
       });
       
       if (error) {
         console.error('Sign up error:', error);
-        if (error.message.includes('User already registered')) {
+        if (error.message.includes('Error sending confirmation email')) {
+          throw new Error('Email confirmation is not configured. Please contact the administrator or disable email confirmation in Supabase settings.');
+        } else if (error.message.includes('User already registered')) {
           throw new Error('An account with this email already exists. Please sign in instead.');
         } else if (error.message.includes('Password should be at least 6 characters')) {
           throw new Error('Password must be at least 6 characters long.');
