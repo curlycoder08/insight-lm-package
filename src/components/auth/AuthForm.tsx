@@ -94,9 +94,13 @@ const AuthForm = () => {
         email,
         password,
         options: {
+          emailRedirectTo: undefined,
           data: {
             full_name: fullName,
-          }
+          },
+          // Disable email confirmation for development
+          // This prevents the "Error sending confirmation email" issue
+          // when SMTP is not configured in Supabase
         }
       });
       
